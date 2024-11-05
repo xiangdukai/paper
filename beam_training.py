@@ -70,9 +70,8 @@ def calculate_objective_function(WH, H, F):
 
 def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, theta_r, phi, theta, \
                         x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective):
-
+    objective_history = [objective]
     for _ in range(5):
-        objective_history = [objective]
         # 选择波束
         F_temp = F.copy()
         for i in range(N_t):
