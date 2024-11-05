@@ -58,11 +58,17 @@ def initialize_x_y(Nx, Ny):
     return x, y, x0, y0
 
 def calculate_objective_function(WH, H, F):
-    WHF = np.dot(np.dot(WH, H), F)
-    objective = np.linalg.det(np.dot(WHF, WHF.conj().T))
+    WHF = WH @ H @ F
+    R = 1 * WH @ (WH.conj().T)
+    
+    n, m = WHF.shape
+    I = np.eye(n, m)
+
+    objective = np.linalg.det(I + 1 * np.linalg.inv(R) @ WHF @ (WHF.conj().T))
+
     return objective
 
-def beam_training():
+def beam_training_new():
     # 初始化波束训练参数
     phi_t, theta_t, phi_r, theta_r, phi, theta = initialize_H_parameter()
     
@@ -74,13 +80,14 @@ def beam_training():
     # 生成随机信道增益
     H = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r)
 
-    # 生成随机F,H
+    # 生成随机F,WH
     codebook_phi_theta = generate_codebook_phi_theta(num_phi=8, num_theta=8)
     F = generate_random_F(codebook_phi_theta)
     WH = generate_random_WH(codebook_phi_theta)
 
     # 计算目标函数
     objective = calculate_objective_function(WH, H, F)
+    print(f"Random Objective Value: {objective}")
 
     for _ in range(3):
         # 选择波束
@@ -88,55 +95,104 @@ def beam_training():
         for i in range(N_t):
             for k in range(len(codebook_phi_theta)):
                 f = array_response_Sa(Mx_t, My_t, math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]), math.cos(codebook_phi_theta[k][1]))
-                F_temp[i * M_t:(i + 1) * M_t, i] = f
+                F_temp[i * M_t:(i + 1) * M_t, i] = f.flatten()
                 if(calculate_objective_function(WH, H, F_temp) > objective):
                     objective = calculate_objective_function(WH, H, F_temp)
-                    F_temp_temp = F_temp.copy()
-            F = F_temp_temp.copy()
+                    F = F_temp.copy()
 
-        WH_temp = WH.copy()
+        W = WH.conj().T
+        W_temp = W.copy()
         for i in range(N_r):
             for k in range(len(codebook_phi_theta)):
-                wh = array_response_Sa(Mx_r, My_r, math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]), math.cos(codebook_phi_theta[k][1]))
-                WH_temp[i * M_t:(i + 1) * M_t, i] = wh
+                w = array_response_Sa(Mx_r, My_r, math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]), math.cos(codebook_phi_theta[k][1]))
+                W_temp[i * M_r:(i + 1) * M_r, i] = w.flatten()
+                WH_temp = W_temp.conj().T
                 if(calculate_objective_function(WH_temp, H, F) > objective):
                     objective = calculate_objective_function(WH_temp, H, F)
-                    WH_temp_temp = F_temp.copy()
-            WH = WH_temp_temp.copy()
+                    WH = WH_temp.copy()
+
+        print(f"Objective Value: {objective}")
 
         # 选择位置
         for i in range(N_t):
+            x_t_temp = x_t.copy()
+            y_t_temp = y_t.copy()
             for k in range(len(codebook_x_y)):
                 x, y = codebook_x_y[k]
-                x_t[i] = x_t0 + x
-                y_t[i] = y_t0 + y
+                x_t[i] = x_t0[i] + x
+                y_t[i] = y_t0[i] + y
                 H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r)
                 if(calculate_objective_function(WH, H_temp, F) > objective):
                     objective = calculate_objective_function(WH, H_temp, F)
                     x_t_temp = x_t.copy()
                     y_t_temp = y_t.copy()
-                    H_temp_temp = H_temp.copy() 
-            H = H_temp_temp.copy()
+                    H = H_temp.copy() 
             x_t = x_t_temp.copy()
             y_t = y_t_temp.copy()
 
         for i in range(N_r):
+            x_r_temp = x_r.copy()
+            y_r_temp = y_r.copy()
             for k in range(len(codebook_x_y)):
                 x, y = codebook_x_y[k]
-                x_r[i] = x_r0 + x
-                y_r[i] = y_r0 + y
+                x_r[i] = x_r0[i] + x
+                y_r[i] = y_r0[i] + y
                 H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r)
                 if(calculate_objective_function(WH, H_temp, F) > objective):
                     objective = calculate_objective_function(WH, H_temp, F)
-                    x_t_temp = x_t.copy()
-                    y_t_temp = y_t.copy()
-                    H_temp_temp = H_temp.copy()
-            H = H_temp_temp.copy()
-            x_t = x_t_temp.copy()
-            y_t = y_t_temp.copy()
+                    x_r_temp = x_r.copy()
+                    y_r_temp = y_r.copy()
+                    H = H_temp.copy()
+            x_r = x_r_temp.copy()
+            y_r = y_r_temp.copy()
+    
+    # 输出最终的波束训练结果
+    print(f"Final Objective Value: {objective}")
+    print(f"Final Selected Position: {x_t - x_t0}, {y_t - y_t0}")
+
+def beam_training_old():
+    # 初始化波束训练参数
+    phi_t, theta_t, phi_r, theta_r, phi, theta = initialize_H_parameter()
+    
+    # 初始化x_t, y_t, x_r, y_r
+    _, _, x_t0, y_t0 = initialize_x_y(Nx_t, Ny_t)
+    _, _, x_r0, y_r0 = initialize_x_y(Nx_r, Ny_r)
+    
+    # 生成随机信道增益
+    H = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t0, y_t0, x_r0, y_r0)
+
+    # 生成随机F,WH
+    codebook_phi_theta = generate_codebook_phi_theta(num_phi=8, num_theta=8)
+    F = generate_random_F(codebook_phi_theta)
+    WH = generate_random_WH(codebook_phi_theta)
+
+    # 计算目标函数
+    objective = calculate_objective_function(WH, H, F)
+    print(f"Random Objective Value: {objective}")
+
+    for _ in range(6):
+        # 选择波束
+        F_temp = F.copy()
+        for i in range(N_t):
+            for k in range(len(codebook_phi_theta)):
+                f = array_response_Sa(Mx_t, My_t, math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]), math.cos(codebook_phi_theta[k][1]))
+                F_temp[i * M_t:(i + 1) * M_t, i] = f.flatten()
+                if(calculate_objective_function(WH, H, F_temp) > objective):
+                    objective = calculate_objective_function(WH, H, F_temp)
+                    F = F_temp.copy()
+
+        W = WH.conj().T
+        W_temp = W.copy()
+        for i in range(N_r):
+            for k in range(len(codebook_phi_theta)):
+                w = array_response_Sa(Mx_r, My_r, math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]), math.cos(codebook_phi_theta[k][1]))
+                W_temp[i * M_r:(i + 1) * M_r, i] = w.flatten()
+                WH_temp = W_temp.conj().T
+                if(calculate_objective_function(WH_temp, H, F) > objective):
+                    objective = calculate_objective_function(WH_temp, H, F)
+                    WH = WH_temp.copy()
+
+        print(f"Objective Value: {objective}")
 
     # 输出最终的波束训练结果
     print(f"Final Objective Value: {objective}")
-    # 输出最终选择的波束和位置
-    print(f"Final Selected Beam: {F}, {WH}")
-    print(f"Final Selected Position: {x_t}, {y_t}")

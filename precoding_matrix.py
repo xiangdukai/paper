@@ -25,8 +25,10 @@ d = lambda_ / 2  # 用于虚拟信道表示的天线间距
 
 # 生成 phi, theta 的码本
 def generate_codebook_phi_theta(num_phi=8, num_theta=8):
-    phi_values = np.linspace(-np.pi, np.pi, num_phi)
-    theta_values = np.linspace(-np.pi / 2, np.pi / 2, num_theta)
+    # phi_values = np.linspace(-np.pi, np.pi, num_phi)
+    # theta_values = np.linspace(-np.pi / 2, np.pi / 2, num_theta)
+    phi_values = np.linspace(-1, 1, num_phi)
+    theta_values = np.linspace(-1, 1, num_theta)
     codebook = [(phi, theta) for phi in phi_values for theta in theta_values]
     return codebook
 
