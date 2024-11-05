@@ -21,19 +21,6 @@ d = lambda_ / 2  # 用于虚拟信道表示的天线间距
 
 alpha = (1 / np.sqrt(2)) * (np.random.normal(0, 1, L + 1) + 1j * np.random.normal(0, 1, L + 1))
 
-# 发射路径方位角 (AoA azimuth) phi_r = sin(phi_true)sin(theta)
-phi_t = np.random.uniform(-1, 1, L)
-# 发射路径俯仰角 (AoA elevation) theta_r = cos(theta)
-theta_t = np.random.uniform(-1, 1, L)
-# 发射路径方位角 (AoA azimuth) phi_r = sin(phi_true)sin(theta)
-phi_r = np.random.uniform(-1, 1, L)
-# 发射路径俯仰角 (AoA elevation) theta_r = cos(theta)
-theta_r = np.random.uniform(-1, 1, L)
-# 直射路径方位角 (AoA azimuth) phi_r = sin(phi_true)sin(theta)
-phi = np.random.uniform(-1, 1)
-# 直射路径俯仰角 (AoA elevation) theta_r = cos(theta)
-theta = np.random.uniform(-1, 1)
-
 
 def generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r):
 

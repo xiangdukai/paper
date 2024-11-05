@@ -110,9 +110,33 @@ def beam_training():
                 x, y = codebook_x_y[k]
                 x_t[i] = x_t0 + x
                 y_t[i] = y_t0 + y
-            #     f = array_response_Sa(Mx_t, My_t, math.sin(codebook[k][0]) * math.sin(codebook[k][1]), math.cos(codebook[k][1]))
-            #     F_temp[i * M_t:(i + 1) * M_t, i] = f
-            #     if(calculate_objective_function(WH, H, F_temp) > objective):
-            #         objective = calculate_objective_function(WH, H, F_temp)
-            #         F_temp_temp = F_temp.copy()
-            # F = F_temp_temp.copy()
+                H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r)
+                if(calculate_objective_function(WH, H_temp, F) > objective):
+                    objective = calculate_objective_function(WH, H_temp, F)
+                    x_t_temp = x_t.copy()
+                    y_t_temp = y_t.copy()
+                    H_temp_temp = H_temp.copy() 
+            H = H_temp_temp.copy()
+            x_t = x_t_temp.copy()
+            y_t = y_t_temp.copy()
+
+        for i in range(N_r):
+            for k in range(len(codebook_x_y)):
+                x, y = codebook_x_y[k]
+                x_r[i] = x_r0 + x
+                y_r[i] = y_r0 + y
+                H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r)
+                if(calculate_objective_function(WH, H_temp, F) > objective):
+                    objective = calculate_objective_function(WH, H_temp, F)
+                    x_t_temp = x_t.copy()
+                    y_t_temp = y_t.copy()
+                    H_temp_temp = H_temp.copy()
+            H = H_temp_temp.copy()
+            x_t = x_t_temp.copy()
+            y_t = y_t_temp.copy()
+
+    # 输出最终的波束训练结果
+    print(f"Final Objective Value: {objective}")
+    # 输出最终选择的波束和位置
+    print(f"Final Selected Beam: {F}, {WH}")
+    print(f"Final Selected Position: {x_t}, {y_t}")
