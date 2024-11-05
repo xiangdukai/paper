@@ -50,4 +50,4 @@ def main_function(iterations = 1):
 
     plot_objective_comparison(objective_new, objective_old)
 
-main_function(1)
+main_function(2)

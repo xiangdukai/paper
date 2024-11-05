@@ -132,7 +132,6 @@ def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, t
 
         # 储存当前objective
         objective_history.append(objective)
-        print(objective_history)
         print(f"Objective Value: {objective}")
     
     # 输出最终的波束训练结果
