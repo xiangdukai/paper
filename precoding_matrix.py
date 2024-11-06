@@ -1,19 +1,18 @@
 import numpy as np
 import math
-from channel_gain import generate_channel
 from array_response import array_response_Sa
 
 
 # 参数定义
-N_t = 16  # t子阵列数
-Nx_t = 4
-Ny_t = 4
+N_t = 4  # t子阵列数
+Nx_t = 2
+Ny_t = 2
 M_t = 64   # t天线单元数
 Mx_t = 8
 My_t = 8
-N_r = 16  # r子阵列数
-Nx_r = 4
-Ny_r = 4
+N_r = 4  # r子阵列数
+Nx_r = 2
+Ny_r = 2
 M_r = 64   # r天线单元数
 Mx_r = 8
 My_r = 8
@@ -25,10 +24,10 @@ d = lambda_ / 2  # 用于虚拟信道表示的天线间距
 
 # 生成 phi, theta 的码本
 def generate_codebook_phi_theta(num_phi=8, num_theta=8):
-    # phi_values = np.linspace(-np.pi, np.pi, num_phi)
-    # theta_values = np.linspace(-np.pi / 2, np.pi / 2, num_theta)
-    phi_values = np.linspace(-1, 1, num_phi)
-    theta_values = np.linspace(-1, 1, num_theta)
+    phi_values = np.linspace(-np.pi, np.pi, num_phi)
+    theta_values = np.linspace(-np.pi / 2, np.pi / 2, num_theta)
+    # phi_values = np.linspace(-1, 1, num_phi)
+    # theta_values = np.linspace(-1, 1, num_theta)
     codebook = [(phi, theta) for phi in phi_values for theta in theta_values]
     return codebook
 

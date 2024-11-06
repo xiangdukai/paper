@@ -2,15 +2,15 @@ from beam_training import *
 from visualization import *
 
 # 参数定义
-N_t = 16  # t子阵列数
-Nx_t = 4
-Ny_t = 4
+N_t = 4  # t子阵列数
+Nx_t = 2
+Ny_t = 2
 M_t = 64   # t天线单元数
 Mx_t = 8
 My_t = 8
-N_r = 16  # r子阵列数
-Nx_r = 4
-Ny_r = 4
+N_r = 4  # r子阵列数
+Nx_r = 2
+Ny_r = 2
 M_r = 64   # r天线单元数
 Mx_r = 8
 My_r = 8
@@ -22,6 +22,7 @@ d = lambda_ / 2  # 用于虚拟信道表示的天线间距
 def main_function(iterations = 1):
     objective_new = [0] * iterations
     objective_old = [0] * iterations
+    best_objective_old = [0] * iterations
 
     for iteration in range(iterations):
         # 初始化波束训练参数
@@ -36,7 +37,7 @@ def main_function(iterations = 1):
         H = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r)
 
         # 生成随机F,WH
-        codebook_phi_theta = generate_codebook_phi_theta(num_phi=8, num_theta=8)
+        codebook_phi_theta = generate_codebook_phi_theta(3, 3)
         F = generate_random_F(codebook_phi_theta)
         WH = generate_random_WH(codebook_phi_theta)
 
@@ -47,7 +48,9 @@ def main_function(iterations = 1):
         objective_new[iteration] = beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, theta_r, phi, theta, \
                             x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective)
         objective_old[iteration] = beam_training_old(codebook_phi_theta, F, WH, H, objective)
+    
+        best_objective_old[iteration] = beam_training_exhaustive_old(codebook_phi_theta, F, WH, H, objective)
 
-    plot_objective_comparison(objective_new, objective_old)
+    plot_objective_comparison(objective_new, objective_old, best_objective_old)
 
-main_function(2)
+main_function()

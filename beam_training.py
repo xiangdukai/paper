@@ -1,25 +1,22 @@
 import numpy as np
 from channel_gain import generate_channel
-from array_response import array_response_Sp,array_response_Sa
+from array_response import array_response_Sa
 from precoding_matrix import *
 
 # 参数定义
-N_t = 16  # t子阵列数
-Nx_t = 4
-Ny_t = 4
+N_t = 4  # t子阵列数
+Nx_t = 2
+Ny_t = 2
 M_t = 64   # t天线单元数
 Mx_t = 8
 My_t = 8
-N_r = 16  # r子阵列数
-Nx_r = 4
-Ny_r = 4
+N_r = 4  # r子阵列数
+Nx_r = 2
+Ny_r = 2
 M_r = 64   # r天线单元数
 Mx_r = 8
 My_r = 8
-L = 5    # 路径数
-f = 10e9  # 系统频率 10GHz
-lambda_ = 3e8 / f  # 天线波长
-d = lambda_ / 2  # 用于虚拟信道表示的天线间距
+
 def initialize_H_parameter():
     # 发射路径方位角 (AoA azimuth) phi_r = sin(phi_true)sin(theta)
     phi_t = np.random.uniform(-1, 1, L)
@@ -171,3 +168,83 @@ def beam_training_old(codebook_phi_theta, F, WH, H, objective):
     print(f"Final Objective Value: {objective}")
 
     return objective_history
+
+def beam_training_exhaustive_old(codebook_phi_theta, F, WH, H, objective):
+    """
+    使用深度优先搜索进行波束训练的穷举算法
+    
+    参数:
+    codebook_phi_theta: 码本
+    F: 发射端预编码矩阵
+    WH: 接收端组合矩阵的共轭转置
+    H: 信道矩阵
+    objective: 初始目标函数值
+    """
+    best_objective = objective
+    best_F = F.copy()
+    best_WH = WH.copy()
+    
+    def dfs_transmitter(depth, current_F):
+        """
+        发射端波束的深度优先搜索
+        depth: 当前搜索的子阵列索引
+        current_F: 当前的预编码矩阵
+        """
+        nonlocal best_objective, best_F, best_WH
+        
+        # 基本情况：已完成所有发射子阵列的搜索
+        if depth == N_t:
+            # 开始接收端的搜索
+            dfs_receiver(0, WH.conj().T.copy(), current_F)
+            return
+            
+        # 为当前子阵列尝试所有可能的波束方向
+        for k in range(len(codebook_phi_theta)):
+            F_temp = current_F.copy()
+            f = array_response_Sa(Mx_t, My_t, 
+                                math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]),
+                                math.cos(codebook_phi_theta[k][1]))
+            F_temp[depth * M_t:(depth + 1) * M_t, depth] = f.flatten()
+            
+            # 递归搜索下一个子阵列
+            dfs_transmitter(depth + 1, F_temp)
+    
+    def dfs_receiver(depth, current_W, current_F):
+        """
+        接收端波束的深度优先搜索
+        depth: 当前搜索的子阵列索引
+        current_W: 当前的组合矩阵
+        current_F: 当前使用的预编码矩阵
+        """
+        nonlocal best_objective, best_F, best_WH
+        
+        # 基本情况：已完成所有接收子阵列的搜索
+        if depth == N_r:
+            current_WH = current_W.conj().T
+            current_objective = calculate_objective_function(current_WH, H, current_F)
+            
+            # 更新最佳结果
+            if current_objective > best_objective:
+                best_objective = current_objective
+                best_F = current_F.copy()
+                best_WH = current_WH.copy()
+                print(f"Found better objective: {best_objective}")
+            return
+            
+        # 为当前子阵列尝试所有可能的波束方向
+        for k in range(len(codebook_phi_theta)):
+            W_temp = current_W.copy()
+            w = array_response_Sa(Mx_r, My_r,
+                                math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]),
+                                math.cos(codebook_phi_theta[k][1]))
+            W_temp[depth * M_r:(depth + 1) * M_r, depth] = w.flatten()
+            
+            # 递归搜索下一个子阵列
+            dfs_receiver(depth + 1, W_temp, current_F)
+    
+    # 开始从发射端第一个子阵列的深度优先搜索
+    dfs_transmitter(0, F.copy())
+    
+    best_objective = [best_objective] * 6
+    # 返回最优结果
+    return best_objective
