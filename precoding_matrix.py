@@ -7,15 +7,15 @@ from array_response import array_response_Sa
 N_t = 4  # t子阵列数
 Nx_t = 2
 Ny_t = 2
-M_t = 64   # t天线单元数
-Mx_t = 8
-My_t = 8
+M_t = 16  # t天线单元数
+Mx_t = 4
+My_t = 4
 N_r = 4  # r子阵列数
 Nx_r = 2
 Ny_r = 2
-M_r = 64   # r天线单元数
-Mx_r = 8
-My_r = 8
+M_r = 16   # r天线单元数
+Mx_r = 4
+My_r = 4
 L = 5    # 路径数
 f = 10e9  # 系统频率 10GHz
 lambda_ = 3e8 / f  # 天线波长
@@ -24,10 +24,10 @@ d = lambda_ / 2  # 用于虚拟信道表示的天线间距
 
 # 生成 phi, theta 的码本
 def generate_codebook_phi_theta(num_phi=8, num_theta=8):
-    phi_values = np.linspace(-np.pi, np.pi, num_phi)
-    theta_values = np.linspace(-np.pi / 2, np.pi / 2, num_theta)
-    # phi_values = np.linspace(-1, 1, num_phi)
-    # theta_values = np.linspace(-1, 1, num_theta)
+    # phi_values = np.linspace(-np.pi, np.pi, num_phi)
+    # theta_values = np.linspace(-np.pi / 2, np.pi / 2, num_theta)
+    phi_values = np.linspace(-1, 1, num_phi)
+    theta_values = np.linspace(-1, 1, num_theta)
     codebook = [(phi, theta) for phi in phi_values for theta in theta_values]
     return codebook
 
