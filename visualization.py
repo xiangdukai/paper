@@ -1,9 +1,6 @@
 import matplotlib.pyplot as plt
 
 def plot_objective_comparison(objective_new, objective_old, best_objective_new, best_objective_old):
-    print(objective_new)
-    print(objective_old)
-    print(best_objective_old)
     
     plt.figure(figsize=(10, 6))
 
@@ -12,7 +9,7 @@ def plot_objective_comparison(objective_new, objective_old, best_objective_new, 
         plt.plot(obj_new, label=f'Objective New - rounds {i+1}', linestyle='-', marker='o')
 
     for i, best_obj_new in enumerate(best_objective_new):
-        plt.plot(best_obj_new, label=f'Objective New - rounds {i+1}', linestyle=':', marker='.')
+        plt.plot(best_obj_new, label=f'Best Objective New - rounds {i+1}', linestyle=':', marker='*')
     
     # Plot old objective values
     for i, obj_old in enumerate(objective_old):
