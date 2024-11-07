@@ -16,6 +16,10 @@ Ny_r = 2
 M_r = 16   # r天线单元数
 Mx_r = 4
 My_r = 4
+L = 5
+f = 10e9  # 系统频率 10GHz
+lambda_ = 3e8 / f  # 天线波长
+d = lambda_ / 2  # 用于虚拟信道表示的天线间距
 
 def initialize_H_parameter():
     # 发射路径方位角 (AoA azimuth) phi_r = sin(phi_true)sin(theta)
@@ -31,7 +35,9 @@ def initialize_H_parameter():
     # 直射路径俯仰角 (AoA elevation) theta_r = cos(theta)
     theta = np.random.uniform(-1, 1)
 
-    return phi_t, theta_t, phi_r, theta_r, phi, theta
+    alpha = (1 / np.sqrt(2)) * (np.random.normal(0, 1, L + 1) + 1j * np.random.normal(0, 1, L + 1))
+
+    return phi_t, theta_t, phi_r, theta_r, phi, theta, alpha
 
 def initialize_x_y(Nx, Ny):
     N = Nx * Ny
@@ -66,7 +72,7 @@ def calculate_objective_function(WH, H, F):
     return objective
 
 def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, theta_r, phi, theta, \
-                        x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective):
+                        x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective, alpha):
     objective_history = [objective]
     for _ in range(5):
         # 选择波束
@@ -102,7 +108,7 @@ def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, t
                 x, y = codebook_x_y[k]
                 x_t[i] = x_t0[i] + x
                 y_t[i] = y_t0[i] + y
-                H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r)
+                H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r, alpha)
                 if(calculate_objective_function(WH, H_temp, F) > objective):
                     objective = calculate_objective_function(WH, H_temp, F)
                     x_t_temp = x_t.copy()
@@ -118,7 +124,7 @@ def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, t
                 x, y = codebook_x_y[k]
                 x_r[i] = x_r0[i] + x
                 y_r[i] = y_r0[i] + y
-                H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r)
+                H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r, alpha)
                 if(calculate_objective_function(WH, H_temp, F) > objective):
                     objective = calculate_objective_function(WH, H_temp, F)
                     x_r_temp = x_r.copy()
@@ -245,12 +251,13 @@ def beam_training_exhaustive_old(codebook_phi_theta, F, WH, H, objective):
     # 开始从发射端第一个子阵列的深度优先搜索
     dfs_transmitter(0, F.copy())
     
+    print(f"Final Objective Value: {best_objective}")
     best_objective = [best_objective] * 6
     # 返回最优结果
     return best_objective
 
 def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, theta_r, 
-                                phi, theta, x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective):
+                                phi, theta, x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective, alpha):
     """
     使用深度优先搜索进行波束训练和位置优化的穷举算法
     
@@ -297,7 +304,7 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
             y_t_temp[pos_depth] = y_t0[pos_depth] + y
             
             H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, 
-                                    x_t_temp, y_t_temp, x_r, y_r)
+                                    x_t_temp, y_t_temp, x_r, y_r, alpha)
             
             dfs_transmitter_position(pos_depth + 1, x_t_temp, y_t_temp, H_temp)
     
@@ -321,7 +328,7 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
             y_r_temp[pos_depth] = y_r0[pos_depth] + y
             
             H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, 
-                                    current_x_t, current_y_t, x_r_temp, y_r_temp)
+                                    current_x_t, current_y_t, x_r_temp, y_r_temp, alpha)
             
             dfs_receiver_position(pos_depth + 1, current_x_t, current_y_t, 
                                 x_r_temp, y_r_temp, H_temp)
@@ -387,5 +394,6 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
     # 从发射端位置开始深度优先搜索
     dfs_transmitter_position(0, x_t.copy(), y_t.copy(), H.copy())
     
+    print(f"Final Objective Value: {best_objective}")
     best_objective_history = [best_objective] * 6
     return best_objective_history

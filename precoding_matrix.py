@@ -16,11 +16,9 @@ Ny_r = 2
 M_r = 16   # r天线单元数
 Mx_r = 4
 My_r = 4
-L = 5    # 路径数
 f = 10e9  # 系统频率 10GHz
 lambda_ = 3e8 / f  # 天线波长
-d = lambda_ / 2  # 用于虚拟信道表示的天线间距 
-
+d = lambda_ / 2  # 用于虚拟信道表示的天线间距
 
 # 生成 phi, theta 的码本
 def generate_codebook_phi_theta(num_phi=8, num_theta=8):
