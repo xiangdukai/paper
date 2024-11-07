@@ -177,7 +177,7 @@ def beam_training_old(codebook_phi_theta, F, WH, H, objective):
 
 def beam_training_exhaustive_old(codebook_phi_theta, F, WH, H, objective):
     """
-    使用深度优先搜索进行波束训练的穷举算法
+    使用深度优先搜索进行波束训练的穷举算法（优化版）
     
     参数:
     codebook_phi_theta: 码本
@@ -190,6 +190,17 @@ def beam_training_exhaustive_old(codebook_phi_theta, F, WH, H, objective):
     best_F = F.copy()
     best_WH = WH.copy()
     
+    # 预计算和缓存波束响应
+    transmitter_responses = [array_response_Sa(Mx_t, My_t,
+                                            math.sin(phi_theta[0]) * math.sin(phi_theta[1]),
+                                            math.cos(phi_theta[1])).flatten()
+                                for phi_theta in codebook_phi_theta]
+                            
+    receiver_responses = [array_response_Sa(Mx_r, My_r,
+                                            math.sin(phi_theta[0]) * math.sin(phi_theta[1]),
+                                            math.cos(phi_theta[1])).flatten()
+                            for phi_theta in codebook_phi_theta]
+
     def dfs_transmitter(depth, current_F):
         """
         发射端波束的深度优先搜索
@@ -198,22 +209,13 @@ def beam_training_exhaustive_old(codebook_phi_theta, F, WH, H, objective):
         """
         nonlocal best_objective, best_F, best_WH
         
-        # 基本情况：已完成所有发射子阵列的搜索
         if depth == N_t:
-            # 开始接收端的搜索
             dfs_receiver(0, WH.conj().T.copy(), current_F)
             return
-            
-        # 为当前子阵列尝试所有可能的波束方向
-        for k in range(len(codebook_phi_theta)):
-            F_temp = current_F.copy()
-            f = array_response_Sa(Mx_t, My_t, 
-                                math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]),
-                                math.cos(codebook_phi_theta[k][1]))
-            F_temp[depth * M_t:(depth + 1) * M_t, depth] = f.flatten()
-            
-            # 递归搜索下一个子阵列
-            dfs_transmitter(depth + 1, F_temp)
+        
+        for k, f in enumerate(transmitter_responses):
+            current_F[depth * M_t:(depth + 1) * M_t, depth] = f
+            dfs_transmitter(depth + 1, current_F)
     
     def dfs_receiver(depth, current_W, current_F):
         """
@@ -224,57 +226,31 @@ def beam_training_exhaustive_old(codebook_phi_theta, F, WH, H, objective):
         """
         nonlocal best_objective, best_F, best_WH
         
-        # 基本情况：已完成所有接收子阵列的搜索
         if depth == N_r:
             current_WH = current_W.conj().T
             current_objective = calculate_objective_function(current_WH, H, current_F)
             
-            # 更新最佳结果
             if current_objective > best_objective:
                 best_objective = current_objective
                 best_F = current_F.copy()
                 best_WH = current_WH.copy()
                 print(f"Found better objective: {best_objective}")
             return
-            
-        # 为当前子阵列尝试所有可能的波束方向
-        for k in range(len(codebook_phi_theta)):
-            W_temp = current_W.copy()
-            w = array_response_Sa(Mx_r, My_r,
-                                math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]),
-                                math.cos(codebook_phi_theta[k][1]))
-            W_temp[depth * M_r:(depth + 1) * M_r, depth] = w.flatten()
-            
-            # 递归搜索下一个子阵列
-            dfs_receiver(depth + 1, W_temp, current_F)
+        
+        for k, w in enumerate(receiver_responses):
+            current_W[depth * M_r:(depth + 1) * M_r, depth] = w
+            dfs_receiver(depth + 1, current_W, current_F)
     
-    # 开始从发射端第一个子阵列的深度优先搜索
     dfs_transmitter(0, F.copy())
     
     print(f"Final Objective Value: {best_objective}")
     best_objective = [best_objective] * 6
-    # 返回最优结果
     return best_objective
 
 def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, theta_r, 
                                 phi, theta, x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective, alpha):
     """
-    使用深度优先搜索进行波束训练和位置优化的穷举算法
-    
-    参数:
-    codebook_phi_theta: 波束码本
-    codebook_x_y: 位置码本
-    phi_t, theta_t: 发射端方位角和俯仰角
-    phi_r, theta_r: 接收端方位角和俯仰角
-    phi, theta: 散射体方位角和俯仰角
-    x_t, y_t: 发射端当前位置
-    x_t0, y_t0: 发射端初始位置
-    x_r, y_r: 接收端当前位置
-    x_r0, y_r0: 接收端初始位置
-    F: 发射端预编码矩阵
-    WH: 接收端组合矩阵的共轭转置
-    H: 信道矩阵
-    objective: 初始目标函数值
+    使用深度优先搜索进行波束训练和位置优化的穷举算法（优化版）
     """
     best_objective = objective
     best_F = F.copy()
@@ -285,82 +261,68 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
     best_y_r = y_r.copy()
     best_H = H.copy()
     
+    # 缓存波束和位置响应，避免重复计算
+    transmitter_beam_responses = [array_response_Sa(Mx_t, My_t, 
+                                                    math.sin(pt[0]) * math.sin(pt[1]), 
+                                                    math.cos(pt[1])).flatten()
+                                    for pt in codebook_phi_theta]
+                                
+    receiver_beam_responses = [array_response_Sa(Mx_r, My_r, 
+                                                math.sin(pt[0]) * math.sin(pt[1]), 
+                                                math.cos(pt[1])).flatten()
+                                for pt in codebook_phi_theta]
+    
+    # 缓存位置偏移值
+    transmitter_position_offsets = [(x_t0[i] + xy[0], y_t0[i] + xy[1]) for i in range(N_t) for xy in codebook_x_y]
+    receiver_position_offsets = [(x_r0[i] + xy[0], y_r0[i] + xy[1]) for i in range(N_r) for xy in codebook_x_y]
+
     def dfs_transmitter_position(pos_depth, current_x_t, current_y_t, current_H):
-        """
-        发射端位置的深度优先搜索
-        """
         nonlocal best_objective, best_F, best_WH, best_x_t, best_y_t, best_x_r, best_y_r, best_H
         
         if pos_depth == N_t:
-            # 完成发射端位置搜索，开始接收端位置搜索
             dfs_receiver_position(0, current_x_t, current_y_t, x_r.copy(), y_r.copy(), current_H)
             return
             
-        for k in range(len(codebook_x_y)):
-            x, y = codebook_x_y[k]
+        for (x_offset, y_offset) in transmitter_position_offsets:
             x_t_temp = current_x_t.copy()
             y_t_temp = current_y_t.copy()
-            x_t_temp[pos_depth] = x_t0[pos_depth] + x
-            y_t_temp[pos_depth] = y_t0[pos_depth] + y
+            x_t_temp[pos_depth], y_t_temp[pos_depth] = x_offset, y_offset
             
             H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, 
-                                    x_t_temp, y_t_temp, x_r, y_r, alpha)
+                                        x_t_temp, y_t_temp, x_r, y_r, alpha)
             
             dfs_transmitter_position(pos_depth + 1, x_t_temp, y_t_temp, H_temp)
     
     def dfs_receiver_position(pos_depth, current_x_t, current_y_t, current_x_r, current_y_r, current_H):
-        """
-        接收端位置的深度优先搜索
-        """
         nonlocal best_objective, best_F, best_WH, best_x_t, best_y_t, best_x_r, best_y_r, best_H
         
         if pos_depth == N_r:
-            # 完成位置搜索，开始波束搜索
-            dfs_transmitter_beam(0, F.copy(), current_x_t, current_y_t, 
-                                current_x_r, current_y_r, current_H)
+            dfs_transmitter_beam(0, F.copy(), current_x_t, current_y_t, current_x_r, current_y_r, current_H)
             return
             
-        for k in range(len(codebook_x_y)):
-            x, y = codebook_x_y[k]
+        for (x_offset, y_offset) in receiver_position_offsets:
             x_r_temp = current_x_r.copy()
             y_r_temp = current_y_r.copy()
-            x_r_temp[pos_depth] = x_r0[pos_depth] + x
-            y_r_temp[pos_depth] = y_r0[pos_depth] + y
+            x_r_temp[pos_depth], y_r_temp[pos_depth] = x_offset, y_offset
             
             H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, 
-                                    current_x_t, current_y_t, x_r_temp, y_r_temp, alpha)
+                                        current_x_t, current_y_t, x_r_temp, y_r_temp, alpha)
             
-            dfs_receiver_position(pos_depth + 1, current_x_t, current_y_t, 
-                                x_r_temp, y_r_temp, H_temp)
+            dfs_receiver_position(pos_depth + 1, current_x_t, current_y_t, x_r_temp, y_r_temp, H_temp)
     
-    def dfs_transmitter_beam(beam_depth, current_F, current_x_t, current_y_t, 
-                            current_x_r, current_y_r, current_H):
-        """
-        发射端波束的深度优先搜索
-        """
+    def dfs_transmitter_beam(beam_depth, current_F, current_x_t, current_y_t, current_x_r, current_y_r, current_H):
         nonlocal best_objective, best_F, best_WH, best_x_t, best_y_t, best_x_r, best_y_r, best_H
         
         if beam_depth == N_t:
-            # 完成发射端波束搜索，开始接收端波束搜索
-            dfs_receiver_beam(0, WH.conj().T.copy(), current_F, current_x_t, current_y_t, 
-                            current_x_r, current_y_r, current_H)
+            dfs_receiver_beam(0, WH.conj().T.copy(), current_F, current_x_t, current_y_t, current_x_r, current_y_r, current_H)
             return
             
-        for k in range(len(codebook_phi_theta)):
+        for f in transmitter_beam_responses:
             F_temp = current_F.copy()
-            f = array_response_Sa(Mx_t, My_t, 
-                                math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]),
-                                math.cos(codebook_phi_theta[k][1]))
-            F_temp[beam_depth * M_t:(beam_depth + 1) * M_t, beam_depth] = f.flatten()
-            
-            dfs_transmitter_beam(beam_depth + 1, F_temp, current_x_t, current_y_t,
-                                current_x_r, current_y_r, current_H)
+            F_temp[beam_depth * M_t:(beam_depth + 1) * M_t, beam_depth] = f
+            dfs_transmitter_beam(beam_depth + 1, F_temp, current_x_t, current_y_t, current_x_r, current_y_r, current_H)
     
-    def dfs_receiver_beam(beam_depth, current_W, current_F, current_x_t, current_y_t,
-                            current_x_r, current_y_r, current_H):
-        """
-        接收端波束的深度优先搜索
-        """
+    def dfs_receiver_beam(beam_depth, current_W, current_F, current_x_t, current_y_t, current_x_r, current_y_r, current_H):
         nonlocal best_objective, best_F, best_WH, best_x_t, best_y_t, best_x_r, best_y_r, best_H
         
         if beam_depth == N_r:
@@ -377,21 +339,13 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
                 best_y_r = current_y_r.copy()
                 best_H = current_H.copy()
                 print(f"Found better objective: {best_objective}")
-                # print(f"Position offset T: {(best_x_t - x_t0).T}, {(best_y_t - y_t0).T}")
-                # print(f"Position offset R: {(best_x_r - x_r0).T}, {(best_y_r - y_r0).T}")
             return
             
-        for k in range(len(codebook_phi_theta)):
+        for w in receiver_beam_responses:
             W_temp = current_W.copy()
-            w = array_response_Sa(Mx_r, My_r,
-                                math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]),
-                                math.cos(codebook_phi_theta[k][1]))
-            W_temp[beam_depth * M_r:(beam_depth + 1) * M_r, beam_depth] = w.flatten()
-            
-            dfs_receiver_beam(beam_depth + 1, W_temp, current_F, current_x_t, current_y_t,
-                            current_x_r, current_y_r, current_H)
+            W_temp[beam_depth * M_r:(beam_depth + 1) * M_r, beam_depth] = w
+            dfs_receiver_beam(beam_depth + 1, W_temp, current_F, current_x_t, current_y_t, current_x_r, current_y_r, current_H)
     
-    # 从发射端位置开始深度优先搜索
     dfs_transmitter_position(0, x_t.copy(), y_t.copy(), H.copy())
     
     print(f"Final Objective Value: {best_objective}")
