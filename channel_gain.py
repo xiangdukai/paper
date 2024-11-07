@@ -4,15 +4,15 @@ from array_response import array_response_Sa,array_response_Sp
 N_t = 2  # t子阵列数
 Nx_t = 2
 Ny_t = 1
-M_t = 16  # t天线单元数
-Mx_t = 4
-My_t = 4
+M_t = 64  # t天线单元数
+Mx_t = 8
+My_t = 8
 N_r = 2  # r子阵列数
 Nx_r = 2
 Ny_r = 1
-M_r = 16   # r天线单元数
-Mx_r = 4
-My_r = 4
+M_r = 64   # r天线单元数
+Mx_r = 8
+My_r = 8
 L = 3    # 路径数
 
 def generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r, alpha):
