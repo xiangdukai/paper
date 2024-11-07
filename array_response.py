@@ -9,8 +9,6 @@ sa_cache = {}
 
 # 优化的阵列响应函数 Sp
 def array_response_Sp(Nx, Ny, x, y, phi, theta):
-    if (Nx, Ny, x, y, phi, theta) in sa_cache:
-        return sa_cache[(Nx, Ny, x, y, phi, theta)]
 
     indices = np.arange(Nx * Ny).reshape(Nx, Ny)
     x_coords = x[indices].flatten()
@@ -18,7 +16,6 @@ def array_response_Sp(Nx, Ny, x, y, phi, theta):
     exponent = 1j * 2 * np.pi / lambda_ * (x_coords * theta + y_coords * phi)
     a = (1 / np.sqrt(Nx * Ny)) * np.exp(exponent)
 
-    sa_cache[(Nx, Ny, x, y, phi, theta)] = a
     return a.reshape(-1, 1)
 
 # 优化的阵列响应函数 Sa，包含缓存机制
