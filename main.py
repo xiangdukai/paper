@@ -20,7 +20,7 @@ def main_function(iterations = 1):
         H = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r, alpha)
 
         # 生成随机F,WH
-        codebook_phi_theta = generate_codebook_phi_theta(2, 2)
+        codebook_phi_theta = generate_codebook_phi_theta(3, 2)
         F = generate_random_F(codebook_phi_theta)
         WH = generate_random_WH(codebook_phi_theta)
 
@@ -40,4 +40,5 @@ def main_function(iterations = 1):
 
     plot_objective_comparison(objective_new, objective_old, best_objective_new, best_objective_old)
 
-main_function()
+
+main_function(1)

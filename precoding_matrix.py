@@ -4,15 +4,15 @@ from array_response import array_response_Sa
 
 
 # 参数定义
-N_t = 4  # t子阵列数
+N_t = 2  # t子阵列数
 Nx_t = 2
-Ny_t = 2
+Ny_t = 1
 M_t = 16  # t天线单元数
 Mx_t = 4
 My_t = 4
-N_r = 4  # r子阵列数
+N_r = 2  # r子阵列数
 Nx_r = 2
-Ny_r = 2
+Ny_r = 1
 M_r = 16   # r天线单元数
 Mx_r = 4
 My_r = 4
@@ -60,17 +60,17 @@ def generate_random_F(codebook):
 def generate_random_WH(codebook):
     diagonal_blocks = []
 
-    for _ in range(N_t):
+    for _ in range(N_r):
         phi, theta = select_random_phi_theta(codebook)
-        w = array_response_Sa(Mx_t, My_t, math.sin(phi) * math.sin(theta), math.cos(theta)) 
+        w = array_response_Sa(Mx_r, My_r, math.sin(phi) * math.sin(theta), math.cos(theta)) 
         diagonal_blocks.append(w)
 
     # 构建对角矩阵，将每个 f 放在对角线上
-    W = np.zeros((N_t * M_t, N_t), dtype=complex)
+    W = np.zeros((N_r * M_r, N_r), dtype=complex)
 
     for i, w in enumerate(diagonal_blocks):
         # 将 f 扁平化并放在对角线上
-        W[i * M_t:(i + 1) * M_t, i] = w.flatten()
+        W[i * M_r:(i + 1) * M_r, i] = w.flatten()
 
     WH = W.conj().T
     return WH

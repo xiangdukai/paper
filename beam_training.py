@@ -4,19 +4,19 @@ from array_response import array_response_Sa
 from precoding_matrix import *
 
 # 参数定义
-N_t = 4  # t子阵列数
+N_t = 2  # t子阵列数
 Nx_t = 2
-Ny_t = 2
+Ny_t = 1
 M_t = 16  # t天线单元数
 Mx_t = 4
 My_t = 4
-N_r = 4  # r子阵列数
+N_r = 2  # r子阵列数
 Nx_r = 2
-Ny_r = 2
+Ny_r = 1
 M_r = 16   # r天线单元数
 Mx_r = 4
 My_r = 4
-L = 5
+L = 3
 f = 10e9  # 系统频率 10GHz
 lambda_ = 3e8 / f  # 天线波长
 d = lambda_ / 2  # 用于虚拟信道表示的天线间距
@@ -64,7 +64,7 @@ def calculate_objective_function(WH, H, F):
     WHF = WH @ H @ F
     R = 1 * WH @ (WH.conj().T)
     
-    n, m = WHF.shape
+    n, m = R.shape
     I = np.eye(n, m)
 
     objective = np.log2(np.linalg.det(I + 1 * np.linalg.inv(R) @ WHF @ (WHF.conj().T))).real
@@ -252,7 +252,7 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
     """
     使用深度优先搜索进行波束训练和位置优化的穷举算法（优化版）
     """
-    best_objective = objective
+    best_objective = 0
     best_F = F.copy()
     best_WH = WH.copy()
     best_x_t = x_t.copy()
@@ -276,11 +276,10 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
     transmitter_position_offsets = [(x_t0[i] + xy[0], y_t0[i] + xy[1]) for i in range(N_t) for xy in codebook_x_y]
     receiver_position_offsets = [(x_r0[i] + xy[0], y_r0[i] + xy[1]) for i in range(N_r) for xy in codebook_x_y]
 
-    def dfs_transmitter_position(pos_depth, current_x_t, current_y_t, current_H):
-        nonlocal best_objective, best_F, best_WH, best_x_t, best_y_t, best_x_r, best_y_r, best_H
+    def dfs_transmitter_position(pos_depth, current_x_t, current_y_t):
         
         if pos_depth == N_t:
-            dfs_receiver_position(0, current_x_t, current_y_t, x_r.copy(), y_r.copy(), current_H)
+            dfs_receiver_position(0, current_x_t, current_y_t, x_r.copy(), y_r.copy())
             return
             
         for (x_offset, y_offset) in transmitter_position_offsets:
@@ -288,15 +287,13 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
             y_t_temp = current_y_t.copy()
             x_t_temp[pos_depth], y_t_temp[pos_depth] = x_offset, y_offset
             
-            H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, 
-                                        x_t_temp, y_t_temp, x_r, y_r, alpha)
-            
-            dfs_transmitter_position(pos_depth + 1, x_t_temp, y_t_temp, H_temp)
+            dfs_transmitter_position(pos_depth + 1, x_t_temp, y_t_temp)
     
-    def dfs_receiver_position(pos_depth, current_x_t, current_y_t, current_x_r, current_y_r, current_H):
-        nonlocal best_objective, best_F, best_WH, best_x_t, best_y_t, best_x_r, best_y_r, best_H
+    def dfs_receiver_position(pos_depth, current_x_t, current_y_t, current_x_r, current_y_r):
         
         if pos_depth == N_r:
+            current_H = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, 
+                            current_x_t, current_y_t, current_x_r, current_y_r, alpha)
             dfs_transmitter_beam(0, F.copy(), current_x_t, current_y_t, current_x_r, current_y_r, current_H)
             return
             
@@ -305,13 +302,9 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
             y_r_temp = current_y_r.copy()
             x_r_temp[pos_depth], y_r_temp[pos_depth] = x_offset, y_offset
             
-            H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, 
-                                        current_x_t, current_y_t, x_r_temp, y_r_temp, alpha)
-            
-            dfs_receiver_position(pos_depth + 1, current_x_t, current_y_t, x_r_temp, y_r_temp, H_temp)
+            dfs_receiver_position(pos_depth + 1, current_x_t, current_y_t, x_r_temp, y_r_temp)
     
     def dfs_transmitter_beam(beam_depth, current_F, current_x_t, current_y_t, current_x_r, current_y_r, current_H):
-        nonlocal best_objective, best_F, best_WH, best_x_t, best_y_t, best_x_r, best_y_r, best_H
         
         if beam_depth == N_t:
             dfs_receiver_beam(0, WH.conj().T.copy(), current_F, current_x_t, current_y_t, current_x_r, current_y_r, current_H)
@@ -328,9 +321,10 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
         if beam_depth == N_r:
             current_WH = current_W.conj().T
             current_objective = calculate_objective_function(current_WH, current_H, current_F)
+            # print(f"Current Objective: {current_objective}")
             
             if current_objective > best_objective:
-                best_objective = current_objective
+                best_objective = current_objective.copy()
                 best_F = current_F.copy()
                 best_WH = current_WH.copy()
                 best_x_t = current_x_t.copy()
@@ -346,7 +340,7 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
             W_temp[beam_depth * M_r:(beam_depth + 1) * M_r, beam_depth] = w
             dfs_receiver_beam(beam_depth + 1, W_temp, current_F, current_x_t, current_y_t, current_x_r, current_y_r, current_H)
     
-    dfs_transmitter_position(0, x_t.copy(), y_t.copy(), H.copy())
+    dfs_transmitter_position(0, x_t.copy(), y_t.copy())
     
     print(f"Final Objective Value: {best_objective}")
     best_objective_history = [best_objective] * 6
