@@ -34,12 +34,38 @@ def plot_movable_area_SNR_simulation(SNR_objective):
 
     # Plot new objective values
     for SNR, obj in enumerate(SNR_objective):
-        plt.plot(obj, label=f'SNR = {(SNR - 1) * 5}', linestyle='-', marker='o')
+        x_values = [i for i in range(1, len(obj) + 1)]
+        plt.plot(x_values, obj, label=f'SNR = {(SNR + 1) * 5}', linestyle='-', marker='o')
     
     # Labels and title
     plt.xlabel('Movable Area')
     plt.ylabel('Objective Value')
     plt.title('movable_area_SNR_simulation')
+    
+    # Legend
+    plt.legend(loc='best')
+    
+    # Grid and layout adjustments for better visualization
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
+    
+    # Show plot
+    plt.show()
+
+def plot_path_number_simulation(objective_old_value, objective_new_value):
+    plt.figure(figsize=(10, 6))
+
+    # 横坐标从1开始：使用 range(1, len(data)+1)
+    plt.plot(range(1, len(objective_old_value) + 1), objective_old_value, 
+                label=f'Old Method', linestyle='-', marker='o', color='red')
+
+    plt.plot(range(1, len(objective_new_value) + 1), objective_new_value, 
+                label=f'New Method', linestyle='-', marker='o', color='blue')
+    
+    # Labels and title
+    plt.xlabel('Path\'s number')
+    plt.ylabel('Objective Value')
+    plt.title('Path_number_simulation')
     
     # Legend
     plt.legend(loc='best')
