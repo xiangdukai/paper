@@ -3,25 +3,11 @@ from channel_gain import generate_channel
 from array_response import array_response_Sa
 from precoding_matrix import *
 
-# 参数定义
-N_t = 2  # t子阵列数
-Nx_t = 2
-Ny_t = 1
-M_t = 64  # t天线单元数
-Mx_t = 8
-My_t = 8
-N_r = 2  # r子阵列数
-Nx_r = 2
-Ny_r = 1
-M_r = 64   # r天线单元数
-Mx_r = 8
-My_r = 8
-L = 3
 f = 10e9  # 系统频率 10GHz
 lambda_ = 3e8 / f  # 天线波长
 d = lambda_ / 2  # 用于虚拟信道表示的天线间距
 
-def initialize_H_parameter():
+def initialize_H_parameter(L):
     # 发射路径方位角 (AoA azimuth) phi_r = sin(phi_true)sin(theta)
     phi_t = np.random.uniform(-1, 1, L)
     # 发射路径俯仰角 (AoA elevation) theta_r = cos(theta)
@@ -39,19 +25,19 @@ def initialize_H_parameter():
 
     return phi_t, theta_t, phi_r, theta_r, phi, theta, alpha
 
-def initialize_x_y(Nx, Ny):
+def initialize_x_y(Nx, Ny, Mx, My, num_x, num_y):
     N = Nx * Ny
     x = np.zeros((N, 1))
     y = np.zeros((N, 1))
 
     for i in range(Nx):
         for j in range(Ny):
-            x[i * Ny_r + j] = i * 12 * lambda_
-            y[i * Ny_r + j] = j * 12 * lambda_
+            x[i * Ny + j] = i * ((num_x -1) * lambda_ + Mx * lambda_ / 2)
+            y[i * Ny + j] = j * ((num_y -1) * lambda_ + My * lambda_ / 2)
     x0 = x.copy()
     y0 = y.copy()
 
-    codebook_x_y = generate_codebook_x_y()
+    codebook_x_y = generate_codebook_x_y(num_x, num_y)
     for i in range(Nx):
         for j in range(Ny):
             code = codebook_x_y[np.random.randint(len(codebook_x_y))]
@@ -60,21 +46,21 @@ def initialize_x_y(Nx, Ny):
 
     return x, y, x0, y0
 
-def calculate_objective_function(WH, H, F):
+def calculate_objective_function(WH, H, F, SNR=10):
     WHF = WH @ H @ F
     R = 1 * WH @ (WH.conj().T)
     
     n, m = R.shape
     I = np.eye(n, m)
 
-    objective = np.log2(np.linalg.det(I + 1 * np.linalg.inv(R) @ WHF @ (WHF.conj().T))).real
+    objective = np.log2(np.linalg.det(I + 10 ** (SNR/10) * np.linalg.inv(R) @ WHF @ (WHF.conj().T))).real
 
     return objective
 
-def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, theta_r, phi, theta, \
-                        x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective, alpha):
+def beam_training_new(Nx_t, Ny_t, Mx_t, My_t, Nx_r, Ny_r, Mx_r, My_r, N_t, M_t, N_r, M_r, iterations, codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, theta_r, phi, theta, \
+                        x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective, alpha, L, SNR):
     objective_history = [objective]
-    for _ in range(5):
+    for _ in range(iterations - 1):
         # 选择波束
         F_temp = F.copy()
         for i in range(N_t):
@@ -82,8 +68,8 @@ def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, t
                 f = array_response_Sa(Mx_t, My_t, math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]), \
                                         math.cos(codebook_phi_theta[k][1]))
                 F_temp[i * M_t:(i + 1) * M_t, i] = f.flatten()
-                if(calculate_objective_function(WH, H, F_temp) > objective):
-                    objective = calculate_objective_function(WH, H, F_temp)
+                if(calculate_objective_function(WH, H, F_temp, SNR) > objective):
+                    objective = calculate_objective_function(WH, H, F_temp, SNR)
                     F = F_temp.copy()
 
         W = WH.conj().T
@@ -94,11 +80,11 @@ def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, t
                                         math.cos(codebook_phi_theta[k][1]))
                 W_temp[i * M_r:(i + 1) * M_r, i] = w.flatten()
                 WH_temp = W_temp.conj().T
-                if(calculate_objective_function(WH_temp, H, F) > objective):
-                    objective = calculate_objective_function(WH_temp, H, F)
+                if(calculate_objective_function(WH_temp, H, F, SNR) > objective):
+                    objective = calculate_objective_function(WH_temp, H, F, SNR)
                     WH = WH_temp.copy()
 
-        print(f"Objective Value: {objective}")
+        #print(f"Objective Value: {objective}")
 
         # 选择位置
         for i in range(N_t):
@@ -108,9 +94,9 @@ def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, t
                 x, y = codebook_x_y[k]
                 x_t[i] = x_t0[i] + x
                 y_t[i] = y_t0[i] + y
-                H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r, alpha)
-                if(calculate_objective_function(WH, H_temp, F) > objective):
-                    objective = calculate_objective_function(WH, H_temp, F)
+                H_temp = generate_channel(Nx_t, Ny_t, Mx_t, My_t, Nx_r, Ny_r, Mx_r, My_r, N_t, M_t, N_r, M_r, phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r, alpha, L)
+                if(calculate_objective_function(WH, H_temp, F, SNR) > objective):
+                    objective = calculate_objective_function(WH, H_temp, F, SNR)
                     x_t_temp = x_t.copy()
                     y_t_temp = y_t.copy()
                     H = H_temp.copy() 
@@ -124,9 +110,9 @@ def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, t
                 x, y = codebook_x_y[k]
                 x_r[i] = x_r0[i] + x
                 y_r[i] = y_r0[i] + y
-                H_temp = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r, alpha)
-                if(calculate_objective_function(WH, H_temp, F) > objective):
-                    objective = calculate_objective_function(WH, H_temp, F)
+                H_temp = generate_channel(Nx_t, Ny_t, Mx_t, My_t, Nx_r, Ny_r, Mx_r, My_r, N_t, M_t, N_r, M_r, phi_t, theta_t, phi_r, theta_r, phi, theta, x_t, y_t, x_r, y_r, alpha, L)
+                if(calculate_objective_function(WH, H_temp, F, SNR) > objective):
+                    objective = calculate_objective_function(WH, H_temp, F, SNR)
                     x_r_temp = x_r.copy()
                     y_r_temp = y_r.copy()
                     H = H_temp.copy()
@@ -143,17 +129,18 @@ def beam_training_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, t
 
     return objective_history
 
-def beam_training_old(codebook_phi_theta, F, WH, H, objective):
+def beam_training_old(Nx_t, Ny_t, Mx_t, My_t, Nx_r, Ny_r, Mx_r, My_r, N_t, M_t, N_r, M_r, iterations, codebook_phi_theta, F, WH, H, objective, SNR):
     objective_history = [objective]
-    for _ in range(5):
+    for _ in range(iterations - 1):
+
         # 选择波束
         F_temp = F.copy()
         for i in range(N_t):
             for k in range(len(codebook_phi_theta)):
                 f = array_response_Sa(Mx_t, My_t, math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]), math.cos(codebook_phi_theta[k][1]))
                 F_temp[i * M_t:(i + 1) * M_t, i] = f.flatten()
-                if(calculate_objective_function(WH, H, F_temp) > objective):
-                    objective = calculate_objective_function(WH, H, F_temp)
+                if(calculate_objective_function(WH, H, F_temp, SNR) > objective):
+                    objective = calculate_objective_function(WH, H, F_temp, SNR)
                     F = F_temp.copy()
 
         W = WH.conj().T
@@ -163,8 +150,8 @@ def beam_training_old(codebook_phi_theta, F, WH, H, objective):
                 w = array_response_Sa(Mx_r, My_r, math.sin(codebook_phi_theta[k][0]) * math.sin(codebook_phi_theta[k][1]), math.cos(codebook_phi_theta[k][1]))
                 W_temp[i * M_r:(i + 1) * M_r, i] = w.flatten()
                 WH_temp = W_temp.conj().T
-                if(calculate_objective_function(WH_temp, H, F) > objective):
-                    objective = calculate_objective_function(WH_temp, H, F)
+                if(calculate_objective_function(WH_temp, H, F, SNR) > objective):
+                    objective = calculate_objective_function(WH_temp, H, F, SNR)
                     WH = WH_temp.copy()
 
         objective_history.append(objective)
@@ -175,7 +162,7 @@ def beam_training_old(codebook_phi_theta, F, WH, H, objective):
 
     return objective_history
 
-def beam_training_exhaustive_old(codebook_phi_theta, F, WH, H, objective):
+def beam_training_exhaustive_old(Nx_t, Ny_t, Mx_t, My_t, Nx_r, Ny_r, Mx_r, My_r, N_t, M_t, N_r, M_r, iterations, codebook_phi_theta, F, WH, H, objective):
     """
     使用深度优先搜索进行波束训练的穷举算法（优化版）
     
@@ -244,11 +231,11 @@ def beam_training_exhaustive_old(codebook_phi_theta, F, WH, H, objective):
     dfs_transmitter(0, F.copy())
     
     print(f"Final Objective Value: {best_objective}")
-    best_objective = [best_objective] * 6
+    best_objective = [best_objective] * iterations
     return best_objective
 
-def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, theta_r, 
-                                phi, theta, x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective, alpha):
+def beam_training_exhaustive_new(Nx_t, Ny_t, Mx_t, My_t, Nx_r, Ny_r, Mx_r, My_r, N_t, M_t, N_r, M_r, iterations, codebook_phi_theta, codebook_x_y, phi_t, theta_t, phi_r, theta_r, 
+                                phi, theta, x_t, y_t, x_t0, y_t0, x_r, y_r, x_r0, y_r0, F, WH, H, objective, alpha, L):
     """
     使用深度优先搜索进行波束训练和位置优化的穷举算法（优化版）
     """
@@ -292,8 +279,8 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
     def dfs_receiver_position(pos_depth, current_x_t, current_y_t, current_x_r, current_y_r):
         
         if pos_depth == N_r:
-            current_H = generate_channel(phi_t, theta_t, phi_r, theta_r, phi, theta, 
-                            current_x_t, current_y_t, current_x_r, current_y_r, alpha)
+            current_H = generate_channel(Nx_t, Ny_t, Mx_t, My_t, Nx_r, Ny_r, Mx_r, My_r, N_t, M_t, N_r, M_r, phi_t, theta_t, phi_r, theta_r, phi, theta, 
+                            current_x_t, current_y_t, current_x_r, current_y_r, alpha, L)
             dfs_transmitter_beam(0, F.copy(), current_x_t, current_y_t, current_x_r, current_y_r, current_H)
             return
             
@@ -343,5 +330,5 @@ def beam_training_exhaustive_new(codebook_phi_theta, codebook_x_y, phi_t, theta_
     dfs_transmitter_position(0, x_t.copy(), y_t.copy())
     
     print(f"Final Objective Value: {best_objective}")
-    best_objective_history = [best_objective] * 6
+    best_objective_history = [best_objective] * iterations
     return best_objective_history

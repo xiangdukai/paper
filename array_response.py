@@ -4,7 +4,6 @@ import numpy as np
 f = 10e9  # 系统频率 10GHz
 lambda_ = 3e8 / f  # 天线波长
 d = lambda_ / 2  # 用于虚拟信道表示的天线间距
-sp_cache = {}
 sa_cache = {}
 
 # 优化的阵列响应函数 Sp

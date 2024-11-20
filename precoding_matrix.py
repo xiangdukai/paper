@@ -4,35 +4,23 @@ from array_response import array_response_Sa
 
 
 # 参数定义
-N_t = 2  # t子阵列数
-Nx_t = 2
-Ny_t = 1
-M_t = 64  # t天线单元数
-Mx_t = 8
-My_t = 8
-N_r = 2  # r子阵列数
-Nx_r = 2
-Ny_r = 1
-M_r = 64   # r天线单元数
-Mx_r = 8
-My_r = 8
 f = 10e9  # 系统频率 10GHz
 lambda_ = 3e8 / f  # 天线波长
 d = lambda_ / 2  # 用于虚拟信道表示的天线间距
 
 # 生成 phi, theta 的码本
 def generate_codebook_phi_theta(num_phi=8, num_theta=8):
-    # phi_values = np.linspace(-np.pi, np.pi, num_phi)
-    # theta_values = np.linspace(-np.pi / 2, np.pi / 2, num_theta)
-    phi_values = np.linspace(-1, 1, num_phi)
-    theta_values = np.linspace(-1, 1, num_theta)
+    phi_values = np.linspace(-np.pi, np.pi, num_phi)
+    theta_values = np.linspace(-np.pi / 2, np.pi / 2, num_theta)
+    # phi_values = np.linspace(-1, 1, num_phi)
+    # theta_values = np.linspace(-1, 1, num_theta)
     codebook = [(phi, theta) for phi in phi_values for theta in theta_values]
     return codebook
 
-# 生成 x, y 的码本,与Mx_t, My_t有关
+# 生成 x, y 的码本
 def generate_codebook_x_y(num_x=4, num_y=4):
-    x_values = np.linspace(2 * lambda_, 8 * lambda_, num_x)
-    y_values = np.linspace(2 * lambda_, 8 * lambda_, num_y)
+    x_values = np.linspace(0, (num_x - 1) * lambda_, num_x)
+    y_values = np.linspace(0, (num_y - 1) * lambda_, num_y)
     codebook = [(x, y) for x in x_values for y in y_values]
     return codebook
 
@@ -40,7 +28,7 @@ def generate_codebook_x_y(num_x=4, num_y=4):
 def select_random_phi_theta(codebook):
     return codebook[np.random.randint(len(codebook))]
 
-def generate_random_F(codebook):
+def generate_random_F(Nx_t, Ny_t, Mx_t, My_t, N_t, M_t, codebook):
     diagonal_blocks = []
 
     for _ in range(N_t):
@@ -57,7 +45,7 @@ def generate_random_F(codebook):
 
     return F
 
-def generate_random_WH(codebook):
+def generate_random_WH(Nx_r, Ny_r, Mx_r, My_r, N_r, M_r, codebook):
     diagonal_blocks = []
 
     for _ in range(N_r):
