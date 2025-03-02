@@ -105,9 +105,9 @@ def movable_area_SNR_simulation(rounds=1, Nx_t=4, Ny_t=4, Mx_t=8, My_t=8, Nx_r=2
 
         SNR_objective_list = [[a + b for a, b in zip(row1, row2)] for row1, row2 in zip(SNR_objective_list, SNR_objective)]
 
-    plot_movable_area_SNR_simulation(SNR_objective)
+    plot_movable_area_SNR_simulation(SNR_objective_list)
 
-def path_number_simulation(rounds=500, Nx_t=4, Ny_t=4, Mx_t=8, My_t=8, Nx_r=2, Ny_r=2, Mx_r=4, My_r=4):
+def path_number_simulation(rounds=1000, Nx_t=4, Ny_t=4, Mx_t=8, My_t=8, Nx_r=2, Ny_r=2, Mx_r=4, My_r=4):
     N_t = Nx_t * Ny_t
     M_t = Mx_t * My_t
     N_r = Nx_r * Ny_r
@@ -155,6 +155,7 @@ def path_number_simulation(rounds=500, Nx_t=4, Ny_t=4, Mx_t=8, My_t=8, Nx_r=2, N
 
 
 
-Monte_Carlo_simulation(rounds=1)
-# movable_area_SNR_simulation()
+#Monte_Carlo_simulation(rounds=500)
+#movable_area_SNR_simulation(rounds=500)
 #path_number_simulation()
+path_number_simulation(rounds=1)
