@@ -58,15 +58,15 @@ def plot_Monte_Carlo_simulation(objective_new, objective_old, best_objective_new
     
     plt.figure(figsize=(12, 8))
     # Plot with different markers and increased font size
-    plt.plot(objective_new, label='Objective New', linestyle='-', marker='o', color='red', markersize=20)
-    plt.plot(best_objective_new, label='Best Objective New', linestyle='--', marker='*', color='red', markersize=24)
+    plt.plot(objective_new, label='MSA-SI', linestyle='-', marker='o', color='red', markersize=20)
+    plt.plot(best_objective_new, label='MSA-ES', linestyle='--', marker='*', color='red', markersize=24)
     
-    plt.plot(objective_old, label='Objective Old', linestyle='-', marker='^', color='blue', markersize=20)
-    plt.plot(best_objective_old, label='Best Objective Old', linestyle='--', marker='s', color='blue', markersize=24)
+    plt.plot(objective_old, label='FSA-SI', linestyle='-', marker='^', color='blue', markersize=20)
+    plt.plot(best_objective_old, label='FSA-ES', linestyle='--', marker='s', color='blue', markersize=24)
     
     # Labels with larger font
     plt.xlabel('Iteration', fontsize=28)
-    plt.ylabel('R', fontsize=28)
+    plt.ylabel('Spectral Efficiency', fontsize=28)
     
     # Larger legend
     plt.legend(loc='best', fontsize=32)
@@ -106,8 +106,8 @@ def plot_movable_area_SNR_simulation(SNR_objective, save_data=True, filename=Non
                     markersize=28)
     
     # Labels with larger font
-    plt.xlabel('MA', fontsize=28)
-    plt.ylabel('R', fontsize=28)
+    plt.xlabel('Movable Area', fontsize=28)
+    plt.ylabel('Spectral Efficiency', fontsize=28)
     
     # Larger legend
     plt.legend(loc='best', fontsize=32)
@@ -136,13 +136,13 @@ def plot_path_number_simulation(objective_old_value, objective_new_value, save_d
     plt.figure(figsize=(12, 8))
     # Plot with different markers and increased size
     plt.plot(range(1, len(objective_old_value) + 1), objective_old_value, 
-                label='Old Method', linestyle='-', marker='o', color='red', markersize=28)
+                label='MSA', linestyle='-', marker='o', color='red', markersize=28)
     plt.plot(range(1, len(objective_new_value) + 1), objective_new_value, 
-                label='New Method', linestyle='-', marker='^', color='blue', markersize=28)
+                label='FSA', linestyle='-', marker='^', color='blue', markersize=28)
     
     # Labels with larger font
     plt.xlabel('Path\'s number', fontsize=28)
-    plt.ylabel('Objective Value', fontsize=28)
+    plt.ylabel('Spectral Efficiency', fontsize=28)
     
     # Larger legend
     plt.legend(loc='best', fontsize=32)
@@ -159,12 +159,9 @@ def plot_path_number_simulation(objective_old_value, objective_new_value, save_d
     plt.savefig('D:/learning/Jilin University/Sophomore/papers/1/figure/path_number_simulation.png', dpi=300, bbox_inches='tight')
     plt.show()
 
-# 示例用法:
-# 1. 运行模拟并保存数据
-# plot_Monte_Carlo_simulation(objective_new, objective_old, best_objective_new, best_objective_old)
 
-# 2. 加载之前的数据并重新绘图
-# data = load_simulation_data("simulation_data/simulation_data_20230515_123045.json")
+# # 加载之前的数据并重新绘图
+# data = load_simulation_data("D:/learning/Jilin University/Sophomore/papers/1/data/simulation_data_20250313_093957.json")
 # plot_Monte_Carlo_simulation(
 #     data['objective_new'], 
 #     data['objective_old'], 
@@ -172,3 +169,19 @@ def plot_path_number_simulation(objective_old_value, objective_new_value, save_d
 #     data['best_objective_old'],
 #     save_data=False
 # )
+
+
+# # 加载之前的数据并重新绘图 - Movable Area SNR simulation
+# data_snr = load_simulation_data("D:/learning/Jilin University/Sophomore/papers/1/data/simulation_data_20250308_134039.json")
+# plot_movable_area_SNR_simulation(
+#     data_snr['SNR_objective'],
+#     save_data=False
+# )
+
+# 加载之前的数据并重新绘图 - Path Number simulation
+data_path = load_simulation_data("D:/learning/Jilin University/Sophomore/papers/1/data/simulation_data_20250304_174312.json")
+plot_path_number_simulation(
+    data_path['objective_old_value'],
+    data_path['objective_new_value'],
+    save_data=False
+)

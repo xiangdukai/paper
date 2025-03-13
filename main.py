@@ -155,7 +155,6 @@ def path_number_simulation(rounds=1000, Nx_t=4, Ny_t=4, Mx_t=8, My_t=8, Nx_r=2, 
 
 
 
-#Monte_Carlo_simulation(rounds=500)
+Monte_Carlo_simulation(rounds=800)
 #movable_area_SNR_simulation(rounds=500)
 #path_number_simulation()
-path_number_simulation(rounds=1)
