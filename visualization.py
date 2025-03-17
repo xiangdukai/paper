@@ -4,6 +4,28 @@ import json
 import os
 from datetime import datetime
 
+# Define a consistent color palette that works well together
+COLORS = {
+    'msa': '#2E86C1',      # Strong blue for MSA
+    'fsa': '#E74C3C',      # Strong red for FSA
+    'msa_variant': '#5DADE2',  # Lighter blue for MSA variant
+    'fsa_variant': '#F1948A',  # Lighter red for FSA variant
+}
+
+# More distinct blue color palette with strong contrast - less colors, bolder differences
+BLUE_PALETTE = [
+    '#BBDEFB',  # Light blue that's still clearly visible
+    '#2196F3',  # Medium vibrant blue
+    '#0D47A1',  # Very dark rich blue
+    '#64B5F6',  # Medium-light blue
+    '#1976D2',  # Medium-dark blue
+    '#E3F2FD',  # Very light blue 
+    '#1565C0',  # Dark navy blue
+    '#90CAF9',  # Pale but visible blue
+    '#0277BD',  # Strong saturated blue
+    '#01579B'   # Dark indigo-blue
+]
+
 def save_simulation_data(data_dict, filename=None):
     """
     Save simulation data to a JSON file.
@@ -57,30 +79,35 @@ def plot_Monte_Carlo_simulation(objective_new, objective_old, best_objective_new
         save_simulation_data(data, filename)
     
     plt.figure(figsize=(12, 8))
-    # Plot with different markers and increased font size
-    plt.plot(objective_new, label='MSA-SI', linestyle='-', marker='o', color='red', markersize=20)
-    plt.plot(best_objective_new, label='MSA-ES', linestyle='--', marker='*', color='red', markersize=24)
+    # Plot with different markers and improved colors - keeping original sizes
+    plt.plot(objective_new, label='MSA-IOSS', linestyle='-', marker='o', 
+             color=COLORS['msa'], markersize=20)
+    plt.plot(best_objective_new, label='MSA-ES', linestyle='--', marker='*', 
+             color=COLORS['msa_variant'], markersize=24)
     
-    plt.plot(objective_old, label='FSA-SI', linestyle='-', marker='^', color='blue', markersize=20)
-    plt.plot(best_objective_old, label='FSA-ES', linestyle='--', marker='s', color='blue', markersize=24)
+    plt.plot(objective_old, label='FSA-IOSS', linestyle='-', marker='^', 
+             color=COLORS['fsa'], markersize=20)
+    plt.plot(best_objective_old, label='FSA-ES', linestyle='--', marker='s', 
+             color=COLORS['fsa_variant'], markersize=24)
     
-    # Labels with larger font
+    # Labels with original font size
     plt.xlabel('Iteration', fontsize=28)
     plt.ylabel('Spectral Efficiency', fontsize=28)
     
-    # Larger legend
+    # Legend with original font size
     plt.legend(loc='best', fontsize=32)
     
-    # Grid and layout adjustments for better visualization
+    # Grid and layout adjustments
     plt.grid(True, which='both', linestyle='--', linewidth=0.8)
     plt.tight_layout()
     
-    # Increase tick font size
+    # Original tick font size
     plt.xticks(fontsize=24)
     plt.yticks(fontsize=24)
     
-    # Show plot
-    plt.savefig('D:/learning/Jilin University/Sophomore/papers/1/figure/monte_carlo_simulation.png', dpi=300, bbox_inches='tight')
+    # Save and show plot
+    plt.savefig('D:/learning/Jilin University/Sophomore/papers/1/figure/monte_carlo_simulation.png', 
+                dpi=300, bbox_inches='tight')
     plt.show()
 
 def plot_movable_area_SNR_simulation(SNR_objective, save_data=True, filename=None):
@@ -92,36 +119,38 @@ def plot_movable_area_SNR_simulation(SNR_objective, save_data=True, filename=Non
         save_simulation_data(data, filename)
     
     markers = ['o', '*', '^', 's', 'D', 'v', 'p', 'h', 'x', '+']
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
-                '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     
     plt.figure(figsize=(12, 8))
-    # Plot with different markers for each SNR
+    
+    # Plot with different markers for each SNR - using more distinctive blue shades
     for SNR, obj in enumerate(SNR_objective):
         marker_idx = SNR % len(markers)
-        color_idx = SNR % len(colors)
+        color_idx = SNR % len(BLUE_PALETTE)
         x_values = [i for i in range(1, len(obj) + 1)]
+        
         plt.plot(x_values, obj, label=f'SNR = {(SNR + 1) * 5}', 
-                    linestyle='-', marker=markers[marker_idx], color=colors[color_idx],
-                    markersize=28)
+                 linestyle='-', marker=markers[marker_idx], 
+                 color=BLUE_PALETTE[color_idx],
+                 markersize=28)
     
-    # Labels with larger font
+    # Labels with original font size
     plt.xlabel('Movable Area', fontsize=28)
     plt.ylabel('Spectral Efficiency', fontsize=28)
     
-    # Larger legend
+    # Legend with original font size
     plt.legend(loc='best', fontsize=32)
     
-    # Grid and layout adjustments for better visualization
+    # Grid and layout adjustments
     plt.grid(True, which='both', linestyle='--', linewidth=0.8)
     plt.tight_layout()
     
-    # Increase tick font size
+    # Original tick font size
     plt.xticks(fontsize=24)
     plt.yticks(fontsize=24)
     
-    # Show plot
-    plt.savefig('D:/learning/Jilin University/Sophomore/papers/1/figure/movable_area_snr_simulation.png', dpi=300, bbox_inches='tight')
+    # Save and show plot
+    plt.savefig('D:/learning/Jilin University/Sophomore/papers/1/figure/movable_area_snr_simulation.png', 
+                dpi=300, bbox_inches='tight')
     plt.show()
 
 def plot_path_number_simulation(objective_old_value, objective_new_value, save_data=True, filename=None):
@@ -134,29 +163,32 @@ def plot_path_number_simulation(objective_old_value, objective_new_value, save_d
         save_simulation_data(data, filename)
     
     plt.figure(figsize=(12, 8))
-    # Plot with different markers and increased size
+    # CORRECTED: Swapped labels and colors for MSA and FSA
     plt.plot(range(1, len(objective_old_value) + 1), objective_old_value, 
-                label='MSA', linestyle='-', marker='o', color='red', markersize=28)
+             label='FSA', linestyle='-', marker='^', 
+             color=COLORS['fsa'], markersize=28)
     plt.plot(range(1, len(objective_new_value) + 1), objective_new_value, 
-                label='FSA', linestyle='-', marker='^', color='blue', markersize=28)
+             label='MSA', linestyle='-', marker='o', 
+             color=COLORS['msa'], markersize=28)
     
-    # Labels with larger font
+    # Labels with original font size
     plt.xlabel('Path\'s number', fontsize=28)
     plt.ylabel('Spectral Efficiency', fontsize=28)
     
-    # Larger legend
+    # Legend with original font size
     plt.legend(loc='best', fontsize=32)
     
-    # Grid and layout adjustments for better visualization
+    # Grid and layout adjustments
     plt.grid(True, which='both', linestyle='--', linewidth=0.8)
     plt.tight_layout()
     
-    # Increase tick font size
+    # Original tick font size
     plt.xticks(fontsize=24)
     plt.yticks(fontsize=24)
     
-    # Show plot
-    plt.savefig('D:/learning/Jilin University/Sophomore/papers/1/figure/path_number_simulation.png', dpi=300, bbox_inches='tight')
+    # Save and show plot
+    plt.savefig('D:/learning/Jilin University/Sophomore/papers/1/figure/path_number_simulation.png', 
+                dpi=300, bbox_inches='tight')
     plt.show()
 
 
